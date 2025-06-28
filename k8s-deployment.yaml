@@ -17,7 +17,7 @@ spec:
       containers:
       - name: chatbot-backend
         image: devops-chatbot:latest
-        imagePullPolicy: Never  # For local Minikube images
+        imagePullPolicy: IfNotPresent  # Try local first, then pull if needed
         ports:
         - containerPort: 8002
         env:

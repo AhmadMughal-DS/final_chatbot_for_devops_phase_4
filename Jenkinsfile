@@ -7,7 +7,7 @@ pipeline {
         GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
         KUBE_NAMESPACE = 'default'
         APP_NAME = 'devops-chatbot'
-        IMAGE_NAME = 'devops-chatbot:latest'
+        IMAGE_NAME = "devops-chatbot:build-${BUILD_NUMBER}"
     }
     
     stages {
@@ -43,7 +43,7 @@ pipeline {
                                 if [ $i -eq 3 ]; then
                                     echo "🔄 Attempting Minikube restart..."
                                     minikube stop || true
-                                    minikube start --driver=docker --memory=3900 --cpus=2
+                                    minikube start --driver=docker --memory=2048 --cpus=2
                                 fi
                                 sleep 15
                             fi
@@ -235,6 +235,37 @@ pipeline {
                         
                         echo "✅ Minikube cluster is healthy and ready!"
                         
+                        # Rebuild Docker image for Minikube after any restart
+                        echo "🔄 Ensuring Docker image is available in Minikube..."
+                        eval $(minikube docker-env)
+                        
+                        # Check if image exists, if not rebuild it
+                        if ! docker images | grep -q devops-chatbot; then
+                            echo "📦 Docker image not found, rebuilding..."
+                            
+                            # Try to build using script first
+                            if [ -f "scripts/build_docker.sh" ]; then
+                                chmod +x scripts/build_docker.sh
+                                ./scripts/build_docker.sh || (
+                                    echo "❌ Script failed, trying manual build..."
+                                    docker build --dns=8.8.8.8 --dns=8.8.4.4 -t ${IMAGE_NAME} . ||
+                                    docker build --network=host -t ${IMAGE_NAME} .
+                                )
+                            else
+                                echo "🏗️ Building Docker image manually..."
+                                docker build --dns=8.8.8.8 --dns=8.8.4.4 -t ${IMAGE_NAME} . ||
+                                docker build --network=host -t ${IMAGE_NAME} .
+                            fi
+                            
+                            # Verify image is built
+                            docker images | grep devops-chatbot || {
+                                echo "❌ Failed to build Docker image"
+                                exit 1
+                            }
+                        else
+                            echo "✅ Docker image already available in Minikube"
+                        fi
+                        
                         # Clean up any existing deployment
                         kubectl delete -f k8s-hpa.yaml --ignore-not-found=true
                         kubectl delete -f k8s-service.yaml --ignore-not-found=true
@@ -251,8 +282,9 @@ pipeline {
                         echo "📦 Applying PersistentVolumeClaims..."
                         kubectl apply -f k8s-pvc.yaml
                         
-                        echo "🚢 Applying Deployment..."
-                        kubectl apply -f k8s-deployment.yaml
+                        echo "🚢 Applying Deployment with correct image tag..."
+                        # Update deployment with current image tag
+                        sed "s|devops-chatbot:latest|${IMAGE_NAME}|g" k8s-deployment.yaml | kubectl apply -f -
                         
                         echo "🌐 Applying Services..."
                         kubectl apply -f k8s-service.yaml
@@ -282,6 +314,15 @@ pipeline {
                         # Check pod logs for any startup issues
                         echo "📝 Checking pod startup logs..."
                         kubectl logs -l app=devops-chatbot --tail=20 || echo "No logs available yet"
+                        
+                        # Wait a bit more for image pull if needed
+                        echo "⏳ Waiting for image pull and container creation..."
+                        sleep 30
+                        
+                        # Check again
+                        echo "📊 Updated pod status:"
+                        kubectl get pods -l app=devops-chatbot
+                        kubectl describe pods -l app=devops-chatbot | grep -A5 -B5 "Events:"
                         
                         # Wait for deployment with shorter timeout and better error handling
                         if ! kubectl wait --for=condition=available --timeout=180s deployment/devops-chatbot-deployment; then
