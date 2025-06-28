@@ -4,7 +4,16 @@ pipeline {
     
     environment {
         PROJECT_NAME = 'devops_chatbot_pipeline'
-        GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
+        GITHUB_REPO = 'https://                            # Try one last reset with aggressive cleanup
+                            echo "🔧 Final attempt - complete aggressive reset..."
+                            minikube delete --all || true
+                            docker system prune -af --volumes || true
+                            pkill -f minikube || true
+                            pkill -f kubectl || true
+                            pkill -f dockerd || true
+                            sleep 20
+                            minikube start --driver=docker --memory=1024 --cpus=1 --force
+                            sleep 90com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
         KUBE_NAMESPACE = 'default'
         APP_NAME = 'devops-chatbot'
         IMAGE_NAME = 'devops-chatbot:latest'
@@ -92,6 +101,12 @@ pipeline {
                     sh '''
                         echo "🚀 Starting Kubernetes Deployment..."
                         
+                        # Pre-deployment aggressive cleanup to ensure fresh start
+                        echo "🧹 Performing pre-deployment cleanup..."
+                        kubectl delete all --all --grace-period=0 --force || true
+                        minikube stop || true
+                        sleep 10
+                        
                         # Complete Minikube reset and troubleshooting
                         echo "🔍 Comprehensive Minikube cluster health check..."
                         
@@ -108,36 +123,39 @@ pipeline {
                         if ! check_api_server; then
                             echo "❌ API server not responding, performing complete reset..."
                             
+                            # Kill any hanging processes
+                            pkill -f minikube || true
+                            pkill -f kubectl || true
+                            pkill -f dockerd || true
+                            sleep 5
+                            
                             # Stop and delete current cluster
                             minikube stop || true
-                            minikube delete || true
+                            minikube delete --all || true
                             
-                            # Clean up Docker containers and networks
-                            docker system prune -f || true
+                            # Clean up Docker containers and networks aggressively
+                            docker system prune -af --volumes || true
+                            docker network prune -f || true
                             
                             # Wait for cleanup
-                            sleep 10
+                            sleep 15
                             
-                            # Start fresh Minikube cluster with optimized settings
-                            echo "🚀 Starting fresh Minikube cluster..."
+                            # Start fresh Minikube cluster with conservative settings
+                            echo "🚀 Starting fresh Minikube cluster with conservative settings..."
                             minikube start \
                                 --driver=docker \
-                                --memory=4096 \
+                                --memory=2048 \
                                 --cpus=2 \
-                                --disk-size=20000mb \
-                                --extra-config=apiserver.enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,NodeRestriction,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
-                                --extra-config=kubelet.authentication-token-webhook=true \
-                                --extra-config=kubelet.authorization-mode=Webhook \
-                                --extra-config=scheduler.bind-address=0.0.0.0 \
-                                --extra-config=controller-manager.bind-address=0.0.0.0 \
+                                --disk-size=10g \
+                                --delete-on-failure \
                                 --force || {
-                                echo "❌ Minikube start failed, trying with minimal config..."
-                                minikube start --driver=docker --memory=3072 --cpus=2 --force
+                                echo "❌ Minikube start failed, trying with absolute minimal config..."
+                                minikube start --driver=docker --memory=1536 --cpus=1 --force
                             }
                             
                             # Extended wait for cluster initialization
                             echo "⏳ Waiting for cluster to initialize..."
-                            sleep 45
+                            sleep 60
                         fi
                         
                         # Step 3: Enhanced API server recovery with multiple strategies
@@ -182,7 +200,7 @@ pipeline {
                                     pkill -f minikube || true
                                     pkill -f kubectl || true
                                     sleep 20
-                                    minikube start --driver=docker --memory=2048 --cpus=1 --no-vtx-check --force || true
+                                    minikube start --driver=docker --memory=1536 --cpus=1 --no-vtx-check --force || true
                                     sleep 60
                                 fi
                                 
