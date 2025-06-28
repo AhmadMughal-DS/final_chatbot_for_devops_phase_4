@@ -94,4 +94,57 @@ Welcome to the deployment guide for the DevOps Chatbot. Follow the steps below t
 
 ---
 
+# DevOps Chatbot - Phase 4 (Kubernetes Deployment)
+
+Welcome to the Kubernetes deployment guide for the DevOps Chatbot. This project includes Docker containerization, CI/CD pipeline with Jenkins, and Kubernetes deployment with HPA.
+
+## 🏗️ Project Structure
+
+```
+final_chatbot_for_devops_phase_4/
+├── backend/                          # FastAPI backend application
+├── frontend/                         # HTML/CSS/JS frontend
+├── tests/                           # Test files
+│   └── test_frontend_chat_headless.py # Selenium headless tests
+├── scripts/                         # Deployment and utility scripts
+│   ├── run_frontend_test.sh         # Frontend test runner
+│   ├── deploy_k8s.sh               # Kubernetes deployment script
+│   └── cleanup_k8s.sh              # Kubernetes cleanup script
+├── k8s-pvc.yaml                    # Kubernetes PersistentVolumeClaims
+├── k8s-deployment.yaml             # Kubernetes Deployment
+├── k8s-service.yaml                # Kubernetes Services
+├── k8s-hpa.yaml                    # Horizontal Pod Autoscaler
+├── docker-compose.yml              # Docker Compose configuration
+├── Dockerfile                      # Docker container definition
+├── Jenkinsfile                     # CI/CD pipeline configuration
+└── requirements.txt                # Python dependencies
+```
+
+## 🚀 Quick Start (Kubernetes on Minikube)
+
+### Prerequisites
+- AWS EC2 t2.large instance
+- Minikube installed and running
+- kubectl configured
+- Docker installed
+
+### Deploy to Kubernetes
+```bash
+# Make scripts executable
+chmod +x scripts/*.sh
+
+# Deploy to Kubernetes
+./scripts/deploy_k8s.sh
+
+# Access the application
+minikube service devops-chatbot-loadbalancer --url
+```
+
+### Cleanup
+```bash
+./scripts/cleanup_k8s.sh
+```
+
+---
+
 Follow these instructions to deploy your DevOps Chatbot successfully on an EC2 instance. For more information, refer to the AWS documentation or reach out for support.

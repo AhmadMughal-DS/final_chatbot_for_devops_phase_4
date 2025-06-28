@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-chatbot-deployment
+  labels:
+    app: devops-chatbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-chatbot
+  template:
+    metadata:
+      labels:
+        app: devops-chatbot
+    spec:
+      containers:
+      - name: chatbot-backend
+        image: devops-chatbot:latest
+        imagePullPolicy: Never  # For local Minikube images
+        ports:
+        - containerPort: 8000
+        env:
+        - name: MONGODB_URI
+          value: "mongodb+srv://ahmadzafar:IUzvD9FvjOjHoqPR@devops.fzvip.mongodb.net/"
+        - name: DEBUG
+          value: "1"
+        volumeMounts:
+        - name: app-data-volume
+          mountPath: /data
+        - name: frontend-volume
+          mountPath: /app/frontend
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "800m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: app-data-volume
+        persistentVolumeClaim:
+          claimName: chatbot-app-data-pvc
+      - name: frontend-volume
+        persistentVolumeClaim:
+          claimName: chatbot-frontend-pvc
