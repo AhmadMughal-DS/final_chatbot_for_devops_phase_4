@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  backend_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devops_chatbot_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./frontend:/app/frontend  # Mount the existing frontend directory
+      - app_data:/data               # Persistent volume for data
+    # Container will be stopped by the Jenkins pipeline after 5 minutes
+
+volumes:
+  app_data:  # Define the volume
