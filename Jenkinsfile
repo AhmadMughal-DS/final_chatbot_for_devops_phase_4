@@ -47,8 +47,22 @@ pipeline {
                         # Set Docker environment to use Minikube's Docker daemon
                         eval $(minikube docker-env)
                         
-                        # Build Docker image inside Minikube
-                        docker build -t ${IMAGE_NAME} .
+                        # Check network connectivity
+                        echo "🌐 Checking network connectivity..."
+                        ping -c 3 8.8.8.8 || echo "Network connectivity issue detected"
+                        nslookup pypi.org || echo "DNS resolution issue detected"
+                        
+                        # Build Docker image inside Minikube with network troubleshooting
+                        echo "🔨 Building Docker image..."
+                        docker build -t ${IMAGE_NAME} . || (
+                            echo "❌ Docker build failed, trying with fallback Dockerfile..."
+                            # Try building with fallback Dockerfile
+                            docker build -f Dockerfile.fallback -t ${IMAGE_NAME} . ||
+                            # Try with host network
+                            docker build --network=host -t ${IMAGE_NAME} . ||
+                            # Try with simplified requirements
+                            (cp requirements-simple.txt requirements.txt && docker build --no-cache -t ${IMAGE_NAME} .)
+                        )
                         
                         # Verify image is built
                         docker images | grep devops-chatbot

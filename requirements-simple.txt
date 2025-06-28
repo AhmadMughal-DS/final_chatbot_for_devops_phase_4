@@ -1,0 +1,16 @@
+fastapi
+groq
+Jinja2
+motor
+pydantic
+pymongo
+uvicorn
+email-validator
+python-multipart
+openai
+webdriver-manager
+websocket-client
+wsproto
+selenium
+pytest
+requests

@@ -1,0 +1,34 @@
+# Fallback Dockerfile with simplified dependencies
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set DNS servers
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf
+RUN echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+
+WORKDIR /app
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Install packages one by one for better error handling
+RUN pip install fastapi uvicorn
+RUN pip install pydantic motor pymongo
+RUN pip install jinja2 email-validator python-multipart
+RUN pip install groq openai
+RUN pip install selenium webdriver-manager
+RUN pip install pytest requests
+
+# Copy application
+COPY . .
+
+# Expose port
+EXPOSE 8000
+
+# Start application
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
