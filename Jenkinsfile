@@ -4,31 +4,8 @@ pipeline {
     
     environment {
         PROJECT_NAME = 'devops_chatbot_pipeline'
-        GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_                        # CRITICAL: Rebuild Docker image in Minikube's Docker daemon
-                        echo "🔄 Rebuilding Docker image in Minikube's Docker daemon..."
-                        eval $(minikube docker-env)
-                        
-                        # Always rebuild the image to ensure it's available with correct tag
-                        echo "📦 Building Docker image with tag: ${IMAGE_NAME}..."
-                        
-                        # Verify we're using Minikube's Docker daemon
-                        echo "🐳 Current Docker context:"
-                        docker info | grep -E "Server Version|Name|Context" || true
-                        echo "🔍 Docker host: $DOCKER_HOST"
-                        echo "🔍 Minikube docker-env status:"
-                        minikube docker-env | head -5
-                        
-                        # Test Docker daemon connectivity
-                        if ! docker ps >/dev/null 2>&1; then
-                            echo "❌ Docker daemon not responding, re-setting environment..."
-                            eval $(minikube docker-env)
-                            sleep 5
-                            if ! docker ps >/dev/null 2>&1; then
-                                echo "❌ Still cannot connect to Docker daemon"
-                                exit 1
-                            fi
-                        fi
-                        echo "✅ Docker daemon is responding"  KUBE_NAMESPACE = 'default'
+        GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
+        KUBE_NAMESPACE = 'default'
         APP_NAME = 'devops-chatbot'
         IMAGE_NAME = "devops-chatbot:build-${BUILD_NUMBER}"
     }
