@@ -4,70 +4,7 @@ pipeline {
     
     environment {
         PROJECT_NAME = 'devops_chatbot_pipeline'
-        GITHUB_REPO =                             echo "❌ API server failed to start after all recovery strategies"
-                            echo "🔍 Comprehensive debugging information:"
-                            
-                            echo "--- Minikube Status ---"
-                            minikube status || true
-                            
-                            echo "--- Minikube Logs (last 100 lines) ---"
-                            minikube logs --length=100 || true
-                            
-                            echo "--- kubectl Configuration ---"
-                            kubectl config view || true
-                            kubectl config current-context || true
-                            
-                            echo "--- System Resources ---"
-                            echo "Memory usage:"
-                            free -h || true
-                            echo "Disk usage:"
-                            df -h || true
-                            echo "CPU info:"
-                            nproc || true
-                            
-                            echo "--- Docker Status ---"
-                            echo "Docker version:"
-                            docker version || true
-                            echo "Running containers:"
-                            docker ps -a || true
-                            echo "Docker system info:"
-                            docker system df || true
-                            
-                            echo "--- Network Connectivity ---"
-                            echo "Testing localhost connectivity:"
-                            curl -k https://localhost:8443 --connect-timeout 5 || true
-                            netstat -tlnp | grep 8443 || true
-                            
-                            echo "--- Last Resort Attempt ---"
-                            echo "🚨 Attempting emergency recovery with advanced troubleshooting script..."
-                            if [ -f "scripts/fix_minikube_advanced.sh" ]; then
-                                chmod +x scripts/fix_minikube_advanced.sh
-                                timeout 300 ./scripts/fix_minikube_advanced.sh || echo "Advanced emergency script timed out or failed"
-                                # Check if emergency recovery worked
-                                if kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
-                                    echo "✅ Advanced emergency recovery successful!"
-                                    API_READY=true
-                                fi
-                            elif [ -f "scripts/fix_minikube.sh" ]; then
-                                chmod +x scripts/fix_minikube.sh
-                                timeout 300 ./scripts/fix_minikube.sh || echo "Emergency script timed out or failed"
-                                # Check if emergency recovery worked
-                                if kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
-                                    echo "✅ Emergency recovery successful!"
-                                    API_READY=true
-                                fi
-                            fi
-                            
-                            if [ "$API_READY" = false ]; then
-                                echo "❌ COMPLETE FAILURE - Cannot establish API server connectivity"
-                                echo "💡 Manual intervention required. Please check:"
-                                echo "   1. EC2 instance resources (memory/CPU)"
-                                echo "   2. Docker daemon status"
-                                echo "   3. Network connectivity"
-                                echo "   4. Try running scripts/fix_minikube_advanced.sh manually"
-                                echo "   5. See API_SERVER_TROUBLESHOOTING.md for detailed recovery steps"
-                                exit 1
-                            fim/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
+        GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
         KUBE_NAMESPACE = 'default'
         APP_NAME = 'devops-chatbot'
         IMAGE_NAME = 'devops-chatbot:latest'
