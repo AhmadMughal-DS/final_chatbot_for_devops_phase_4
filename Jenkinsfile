@@ -4,7 +4,70 @@ pipeline {
     
     environment {
         PROJECT_NAME = 'devops_chatbot_pipeline'
-        GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
+        GITHUB_REPO =                             echo "❌ API server failed to start after all recovery strategies"
+                            echo "🔍 Comprehensive debugging information:"
+                            
+                            echo "--- Minikube Status ---"
+                            minikube status || true
+                            
+                            echo "--- Minikube Logs (last 100 lines) ---"
+                            minikube logs --length=100 || true
+                            
+                            echo "--- kubectl Configuration ---"
+                            kubectl config view || true
+                            kubectl config current-context || true
+                            
+                            echo "--- System Resources ---"
+                            echo "Memory usage:"
+                            free -h || true
+                            echo "Disk usage:"
+                            df -h || true
+                            echo "CPU info:"
+                            nproc || true
+                            
+                            echo "--- Docker Status ---"
+                            echo "Docker version:"
+                            docker version || true
+                            echo "Running containers:"
+                            docker ps -a || true
+                            echo "Docker system info:"
+                            docker system df || true
+                            
+                            echo "--- Network Connectivity ---"
+                            echo "Testing localhost connectivity:"
+                            curl -k https://localhost:8443 --connect-timeout 5 || true
+                            netstat -tlnp | grep 8443 || true
+                            
+                            echo "--- Last Resort Attempt ---"
+                            echo "🚨 Attempting emergency recovery with advanced troubleshooting script..."
+                            if [ -f "scripts/fix_minikube_advanced.sh" ]; then
+                                chmod +x scripts/fix_minikube_advanced.sh
+                                timeout 300 ./scripts/fix_minikube_advanced.sh || echo "Advanced emergency script timed out or failed"
+                                # Check if emergency recovery worked
+                                if kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
+                                    echo "✅ Advanced emergency recovery successful!"
+                                    API_READY=true
+                                fi
+                            elif [ -f "scripts/fix_minikube.sh" ]; then
+                                chmod +x scripts/fix_minikube.sh
+                                timeout 300 ./scripts/fix_minikube.sh || echo "Emergency script timed out or failed"
+                                # Check if emergency recovery worked
+                                if kubectl cluster-info --request-timeout=10s >/dev/null 2>&1; then
+                                    echo "✅ Emergency recovery successful!"
+                                    API_READY=true
+                                fi
+                            fi
+                            
+                            if [ "$API_READY" = false ]; then
+                                echo "❌ COMPLETE FAILURE - Cannot establish API server connectivity"
+                                echo "💡 Manual intervention required. Please check:"
+                                echo "   1. EC2 instance resources (memory/CPU)"
+                                echo "   2. Docker daemon status"
+                                echo "   3. Network connectivity"
+                                echo "   4. Try running scripts/fix_minikube_advanced.sh manually"
+                                echo "   5. See API_SERVER_TROUBLESHOOTING.md for detailed recovery steps"
+                                exit 1
+                            fim/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
         KUBE_NAMESPACE = 'default'
         APP_NAME = 'devops-chatbot'
         IMAGE_NAME = 'devops-chatbot:latest'
@@ -92,41 +155,139 @@ pipeline {
                     sh '''
                         echo "🚀 Starting Kubernetes Deployment..."
                         
-                        # Check Minikube status and restart if needed
-                        echo "🔍 Checking Minikube cluster status..."
-                        if ! minikube status | grep -q "kubelet: Running"; then
-                            echo "⚠️ Minikube not running properly, restarting..."
+                        # Complete Minikube reset and troubleshooting
+                        echo "🔍 Comprehensive Minikube cluster health check..."
+                        
+                        # Function to check API server
+                        check_api_server() {
+                            kubectl cluster-info --request-timeout=5s >/dev/null 2>&1
+                        }
+                        
+                        # Step 1: Check current status
+                        echo "📊 Current Minikube status:"
+                        minikube status || true
+                        
+                        # Step 2: Check if API server is responding
+                        if ! check_api_server; then
+                            echo "❌ API server not responding, performing complete reset..."
+                            
+                            # Stop and delete current cluster
                             minikube stop || true
-                            minikube start --driver=docker --memory=3900 --cpus=2
-                            sleep 30
+                            minikube delete || true
+                            
+                            # Clean up Docker containers and networks
+                            docker system prune -f || true
+                            
+                            # Wait for cleanup
+                            sleep 10
+                            
+                            # Start fresh Minikube cluster with optimized settings
+                            echo "🚀 Starting fresh Minikube cluster..."
+                            minikube start \
+                                --driver=docker \
+                                --memory=4096 \
+                                --cpus=2 \
+                                --disk-size=20000mb \
+                                --extra-config=apiserver.enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,NodeRestriction,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
+                                --extra-config=kubelet.authentication-token-webhook=true \
+                                --extra-config=kubelet.authorization-mode=Webhook \
+                                --extra-config=scheduler.bind-address=0.0.0.0 \
+                                --extra-config=controller-manager.bind-address=0.0.0.0 \
+                                --force || {
+                                echo "❌ Minikube start failed, trying with minimal config..."
+                                minikube start --driver=docker --memory=3072 --cpus=2 --force
+                            }
+                            
+                            # Extended wait for cluster initialization
+                            echo "⏳ Waiting for cluster to initialize..."
+                            sleep 45
                         fi
                         
-                        # Wait for kubectl to be ready with retry
-                        echo "⏳ Waiting for kubectl connectivity..."
-                        for i in {1..10}; do
-                            if kubectl cluster-info --request-timeout=10s; then
-                                echo "✅ kubectl is ready!"
+                        # Step 3: Enhanced API server recovery with multiple strategies
+                        echo "⏳ Waiting for API server to be ready with enhanced recovery..."
+                        API_READY=false
+                        for i in {1..25}; do
+                            echo "🔍 API server check attempt $i/25..."
+                            
+                            # Check API server with multiple verification methods
+                            if kubectl cluster-info --request-timeout=8s >/dev/null 2>&1 && \
+               kubectl get nodes --request-timeout=8s >/dev/null 2>&1 && \
+               kubectl version --client=false --request-timeout=8s >/dev/null 2>&1; then
+                                echo "✅ API server is fully responding!"
+                                API_READY=true
                                 break
                             else
-                                echo "⏳ Waiting for kubectl... (attempt $i/10)"
+                                echo "⏳ API server not ready, waiting... (attempt $i/25)"
+                                
+                                # Progressive recovery strategies
                                 if [ $i -eq 5 ]; then
-                                    echo "🔄 Restarting Minikube cluster..."
+                                    echo "� Strategy 1: Restarting kubelet inside Minikube..."
+                                    minikube ssh 'sudo systemctl restart kubelet' >/dev/null 2>&1 || true
+                                    sleep 20
+                                elif [ $i -eq 10 ]; then
+                                    echo "🔧 Strategy 2: Soft Minikube restart..."
                                     minikube stop || true
-                                    minikube start --driver=docker --memory=3900 --cpus=2
+                                    sleep 10
+                                    minikube start --driver=docker --memory=3072 --cpus=2 --keep-context || true
+                                    sleep 30
+                                elif [ $i -eq 15 ]; then
+                                    echo "🔧 Strategy 3: Hard reset with minimal resources..."
+                                    minikube delete || true
+                                    docker system prune -f || true
+                                    sleep 15
+                                    minikube start --driver=docker --memory=2560 --cpus=2 --disk-size=15g --force || true
+                                    sleep 45
+                                elif [ $i -eq 20 ]; then
+                                    echo "🔧 Strategy 4: Emergency minimal configuration..."
+                                    minikube delete || true
+                                    docker system prune -af || true
+                                    # Kill any hanging processes
+                                    pkill -f minikube || true
+                                    pkill -f kubectl || true
+                                    sleep 20
+                                    minikube start --driver=docker --memory=2048 --cpus=1 --no-vtx-check --force || true
+                                    sleep 60
                                 fi
-                                sleep 15
+                                
+                                sleep 12
                             fi
                         done
                         
-                        # Final check
-                        if ! kubectl cluster-info --request-timeout=10s; then
-                            echo "❌ kubectl connectivity failed after retries"
-                            echo "🔍 Minikube status:"
+                        # Step 4: Final verification
+                        if [ "$API_READY" = false ]; then
+                            echo "❌ API server failed to start after extended attempts"
+                            echo "🔍 Debugging information:"
                             minikube status || true
-                            echo "🔍 Kubectl configuration:"
+                            minikube logs || true
                             kubectl config view || true
-                            exit 1
+                            
+                            # Try one last reset
+                            echo "� Final attempt - complete reset..."
+                            minikube delete --all || true
+                            docker system prune -af || true
+                            sleep 15
+                            minikube start --driver=docker --memory=2048 --cpus=1 --force
+                            sleep 60
+                            
+                            if ! check_api_server; then
+                                echo "❌ Complete failure - API server cannot be started"
+                                exit 1
+                            fi
                         fi
+                        
+                        # Step 5: Verify cluster components
+                        echo "✅ Verifying cluster components..."
+                        kubectl get nodes --no-headers || {
+                            echo "❌ Nodes not ready"
+                            exit 1
+                        }
+                        
+                        kubectl get pods -n kube-system --no-headers || {
+                            echo "❌ System pods not ready"
+                            exit 1
+                        }
+                        
+                        echo "✅ Minikube cluster is healthy and ready!"
                         
                         # Clean up any existing deployment
                         kubectl delete -f k8s-hpa.yaml --ignore-not-found=true
