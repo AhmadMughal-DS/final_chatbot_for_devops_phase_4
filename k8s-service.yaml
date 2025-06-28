@@ -7,8 +7,8 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - port: 8000
-    targetPort: 8000
+  - port: 8002
+    targetPort: 8002
     nodePort: 30080  # Accessible via <minikube-ip>:30080
     protocol: TCP
     name: http
@@ -25,7 +25,7 @@ spec:
   type: LoadBalancer
   ports:
   - port: 80
-    targetPort: 8000
+    targetPort: 8002
     protocol: TCP
     name: http
   selector:

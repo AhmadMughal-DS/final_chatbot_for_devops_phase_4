@@ -19,7 +19,7 @@ spec:
         image: devops-chatbot:latest
         imagePullPolicy: Never  # For local Minikube images
         ports:
-        - containerPort: 8000
+        - containerPort: 8002
         env:
         - name: MONGODB_URI
           value: "mongodb+srv://ahmadzafar:IUzvD9FvjOjHoqPR@devops.fzvip.mongodb.net/"
@@ -40,14 +40,27 @@ spec:
         livenessProbe:
           httpGet:
             path: /
-            port: 8000
-          initialDelaySeconds: 30
+            port: 8002
+          initialDelaySeconds: 60
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /
-            port: 8000
-          initialDelaySeconds: 5
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 12
           periodSeconds: 5
       volumes:
       - name: app-data-volume

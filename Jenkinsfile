@@ -273,7 +273,35 @@ pipeline {
                 dir('final_chatbot_for_devops_phase_4') {
                     sh '''
                         echo "⏳ Waiting for deployment to be ready..."
-                        kubectl wait --for=condition=available --timeout=300s deployment/devops-chatbot-deployment
+                        
+                        # Check deployment status first
+                        echo "📊 Current deployment status:"
+                        kubectl get deployments
+                        kubectl get pods -l app=devops-chatbot
+                        
+                        # Check pod logs for any startup issues
+                        echo "📝 Checking pod startup logs..."
+                        kubectl logs -l app=devops-chatbot --tail=20 || echo "No logs available yet"
+                        
+                        # Wait for deployment with shorter timeout and better error handling
+                        if ! kubectl wait --for=condition=available --timeout=180s deployment/devops-chatbot-deployment; then
+                            echo "❌ Deployment failed to become available, debugging..."
+                            
+                            echo "🔍 Pod details:"
+                            kubectl describe pods -l app=devops-chatbot
+                            
+                            echo "📝 Pod logs:"
+                            kubectl logs -l app=devops-chatbot --tail=50 || echo "No logs available"
+                            
+                            echo "🚨 Deployment status:"
+                            kubectl describe deployment devops-chatbot-deployment
+                            
+                            # Try to get more information about the issue
+                            echo "⚠️ Events:"
+                            kubectl get events --sort-by=.metadata.creationTimestamp | tail -20
+                            
+                            exit 1
+                        fi
                         
                         echo "📊 Checking deployment status:"
                         kubectl get pods -l app=devops-chatbot
@@ -292,7 +320,7 @@ pipeline {
                         # Get application URL
                         echo "🌐 Application Access Information:"
                         MINIKUBE_IP=$(minikube ip)
-                        NODE_PORT=$(kubectl get service devops-chatbot-nodeport -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
+                        NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
                         echo "🚀 Access your application at: http://$MINIKUBE_IP:$NODE_PORT"
                         echo "📝 Note: If NodePort detection fails, try: http://$MINIKUBE_IP:30080"
                     '''
@@ -338,7 +366,7 @@ pipeline {
                         
                         # Get application URL for testing
                         MINIKUBE_IP=$(minikube ip)
-                        NODE_PORT=$(kubectl get service devops-chatbot-nodeport -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
+                        NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
                         export TEST_URL="http://$MINIKUBE_IP:$NODE_PORT"
                         
                         echo "🎯 Testing Kubernetes deployment at: $TEST_URL"
@@ -361,7 +389,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 
 # Get test URL from environment
-TEST_URL = os.environ.get('TEST_URL', 'http://localhost:8000')
+TEST_URL = os.environ.get('TEST_URL', 'http://localhost:8002')
 print(f"🎯 Testing Kubernetes deployment at: {TEST_URL}")
 
 # Chrome options for headless mode
@@ -471,7 +499,7 @@ EOF
             sh '''
                 echo "🌐 Access your application:"
                 MINIKUBE_IP=$(minikube ip) || echo "Could not get Minikube IP"
-                NODE_PORT=$(kubectl get service devops-chatbot-nodeport -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
+                NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
                 echo "URL: http://$MINIKUBE_IP:$NODE_PORT"
                 echo "📝 Fallback URL: http://$MINIKUBE_IP:30080"
                 echo "📈 Auto-scaling is enabled with HPA"

@@ -40,4 +40,4 @@ RUN echo "Contents of the workspace:" && ls -la && \
     echo "Contents of frontend directory:" && ls -la /app/frontend
 
 # 3) Start Uvicorn with debugging information
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8002", "--log-level", "debug"]
