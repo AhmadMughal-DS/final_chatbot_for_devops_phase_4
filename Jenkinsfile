@@ -4,8 +4,31 @@ pipeline {
     
     environment {
         PROJECT_NAME = 'devops_chatbot_pipeline'
-        GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
-        KUBE_NAMESPACE = 'default'
+        GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_                        # CRITICAL: Rebuild Docker image in Minikube's Docker daemon
+                        echo "🔄 Rebuilding Docker image in Minikube's Docker daemon..."
+                        eval $(minikube docker-env)
+                        
+                        # Always rebuild the image to ensure it's available with correct tag
+                        echo "📦 Building Docker image with tag: ${IMAGE_NAME}..."
+                        
+                        # Verify we're using Minikube's Docker daemon
+                        echo "🐳 Current Docker context:"
+                        docker info | grep -E "Server Version|Name|Context" || true
+                        echo "🔍 Docker host: $DOCKER_HOST"
+                        echo "🔍 Minikube docker-env status:"
+                        minikube docker-env | head -5
+                        
+                        # Test Docker daemon connectivity
+                        if ! docker ps >/dev/null 2>&1; then
+                            echo "❌ Docker daemon not responding, re-setting environment..."
+                            eval $(minikube docker-env)
+                            sleep 5
+                            if ! docker ps >/dev/null 2>&1; then
+                                echo "❌ Still cannot connect to Docker daemon"
+                                exit 1
+                            fi
+                        fi
+                        echo "✅ Docker daemon is responding"  KUBE_NAMESPACE = 'default'
         APP_NAME = 'devops-chatbot'
         IMAGE_NAME = "devops-chatbot:build-${BUILD_NUMBER}"
     }
@@ -66,16 +89,39 @@ pipeline {
                         nslookup pypi.org || echo "DNS resolution issue detected"
                         
                         # Make build script executable and run it
-                        chmod +x scripts/build_docker.sh
-                        ./scripts/build_docker.sh || (
-                            echo "❌ Script failed, trying manual build..."
-                            # Manual fallback
-                            docker build --dns=8.8.8.8 --dns=8.8.4.4 -t ${IMAGE_NAME} . ||
-                            docker build --network=host -t ${IMAGE_NAME} .
-                        )
+                        echo "📦 Building Docker image with tag: ${IMAGE_NAME}"
                         
-                        # Verify image is built
+                        # Build with multiple tags (latest and build-specific)
+                        if [ -f "scripts/build_docker.sh" ]; then
+                            chmod +x scripts/build_docker.sh
+                            ./scripts/build_docker.sh || (
+                                echo "❌ Script failed, trying manual build..."
+                                # Manual fallback with multiple tags
+                                docker build --dns=8.8.8.8 --dns=8.8.4.4 -t devops-chatbot:latest -t ${IMAGE_NAME} . ||
+                                docker build --network=host -t devops-chatbot:latest -t ${IMAGE_NAME} .
+                            )
+                            # Ensure we have the build-specific tag
+                            docker tag devops-chatbot:latest ${IMAGE_NAME} || echo "Tag already exists"
+                        else
+                            echo "🏗️ Building Docker image manually with multiple tags..."
+                            docker build --dns=8.8.8.8 --dns=8.8.4.4 -t devops-chatbot:latest -t ${IMAGE_NAME} . ||
+                            docker build --network=host -t devops-chatbot:latest -t ${IMAGE_NAME} .
+                        fi
+                        
+                        # Verify image is built with both tags
+                        echo "🔍 Verifying Docker images:"
                         docker images | grep devops-chatbot
+                        
+                        # Check specifically for our build tag
+                        if docker images | grep -q "${IMAGE_NAME}"; then
+                            echo "✅ Build-specific image ${IMAGE_NAME} available"
+                        else
+                            echo "❌ Build-specific image ${IMAGE_NAME} not found, attempting to tag..."
+                            docker tag devops-chatbot:latest ${IMAGE_NAME} || {
+                                echo "❌ Failed to create build-specific tag"
+                                exit 1
+                            }
+                        fi
                         
                         echo "✅ Docker image built successfully for Kubernetes"
                     '''
@@ -235,35 +281,77 @@ pipeline {
                         
                         echo "✅ Minikube cluster is healthy and ready!"
                         
-                        # Rebuild Docker image for Minikube after any restart
-                        echo "🔄 Ensuring Docker image is available in Minikube..."
+                        # CRITICAL: Rebuild Docker image in Minikube's Docker daemon
+                        echo "🔄 Rebuilding Docker image in Minikube's Docker daemon..."
                         eval $(minikube docker-env)
                         
-                        # Check if image exists, if not rebuild it
-                        if ! docker images | grep -q devops-chatbot; then
-                            echo "📦 Docker image not found, rebuilding..."
-                            
-                            # Try to build using script first
+                        # Always rebuild the image to ensure it's available with correct tag
+                        echo "📦 Building Docker image with tag: ${IMAGE_NAME}..."
+                        
+                        # Verify we're using Minikube's Docker daemon
+                        echo "� Current Docker context:"
+                        docker info | grep -E "Server Version|Name" || true
+                        
+                        # Build the image with both latest and specific tag
+                        echo "🏗️ Building Docker image with multiple tags..."
+                        
+                        # Build with primary method using DNS settings
+                        if docker build --dns=8.8.8.8 --dns=8.8.4.4 -t devops-chatbot:latest -t ${IMAGE_NAME} .; then
+                            echo "✅ Primary build successful"
+                        elif docker build --network=host -t devops-chatbot:latest -t ${IMAGE_NAME} .; then
+                            echo "✅ Network host build successful"
+                        elif docker build -t devops-chatbot:latest -t ${IMAGE_NAME} .; then
+                            echo "✅ Basic build successful"
+                        else
+                            echo "❌ All build methods failed, trying with build script..."
                             if [ -f "scripts/build_docker.sh" ]; then
                                 chmod +x scripts/build_docker.sh
-                                ./scripts/build_docker.sh || (
-                                    echo "❌ Script failed, trying manual build..."
-                                    docker build --dns=8.8.8.8 --dns=8.8.4.4 -t ${IMAGE_NAME} . ||
-                                    docker build --network=host -t ${IMAGE_NAME} .
-                                )
+                                ./scripts/build_docker.sh || {
+                                    echo "❌ Build script also failed"
+                                    exit 1
+                                }
+                                # Tag the latest image with our specific tag
+                                docker tag devops-chatbot:latest ${IMAGE_NAME} || {
+                                    echo "❌ Failed to tag image"
+                                    exit 1
+                                }
                             else
-                                echo "🏗️ Building Docker image manually..."
-                                docker build --dns=8.8.8.8 --dns=8.8.4.4 -t ${IMAGE_NAME} . ||
-                                docker build --network=host -t ${IMAGE_NAME} .
-                            fi
-                            
-                            # Verify image is built
-                            docker images | grep devops-chatbot || {
-                                echo "❌ Failed to build Docker image"
+                                echo "❌ No build script available and all builds failed"
                                 exit 1
-                            }
+                            fi
+                        fi
+                        
+                        # Verify the specific image is built and available
+                        echo "🔍 Verifying Docker image availability:"
+                        docker images | grep devops-chatbot || {
+                            echo "❌ Failed to build Docker image"
+                            exit 1
+                        }
+                        
+                        # Specifically check for our tagged image
+                        if docker images | grep -q "${IMAGE_NAME}"; then
+                            echo "✅ Docker image ${IMAGE_NAME} is available in Minikube"
+                            echo "📦 Image details:"
+                            docker images | grep devops-chatbot
                         else
-                            echo "✅ Docker image already available in Minikube"
+                            echo "❌ Docker image ${IMAGE_NAME} not found"
+                            echo "Available images:"
+                            docker images | grep devops-chatbot || echo "No devops-chatbot images found"
+                            
+                            # Try to tag from latest if it exists
+                            if docker images | grep -q "devops-chatbot:latest"; then
+                                echo "🔄 Attempting to tag from latest..."
+                                docker tag devops-chatbot:latest ${IMAGE_NAME}
+                                if docker images | grep -q "${IMAGE_NAME}"; then
+                                    echo "✅ Successfully tagged image as ${IMAGE_NAME}"
+                                else
+                                    echo "❌ Failed to tag image"
+                                    exit 1
+                                fi
+                            else
+                                echo "❌ No devops-chatbot images available at all"
+                                exit 1
+                            fi
                         fi
                         
                         # Clean up any existing deployment
@@ -283,14 +371,30 @@ pipeline {
                         kubectl apply -f k8s-pvc.yaml
                         
                         echo "🚢 Applying Deployment with correct image tag..."
-                        # Update deployment with current image tag
-                        sed "s|devops-chatbot:latest|${IMAGE_NAME}|g" k8s-deployment.yaml | kubectl apply -f -
+                        # Create a temporary deployment file with correct image tag
+                        cp k8s-deployment.yaml k8s-deployment-temp.yaml
+                        sed -i "s|devops-chatbot:latest|${IMAGE_NAME}|g" k8s-deployment-temp.yaml
+                        
+                        # Verify the sed replacement worked
+                        echo "🔍 Verifying image tag in deployment file:"
+                        grep "image:" k8s-deployment-temp.yaml
+                        
+                        # Apply the deployment with correct image
+                        kubectl apply -f k8s-deployment-temp.yaml
+                        
+                        # Clean up temp file
+                        rm k8s-deployment-temp.yaml
                         
                         echo "🌐 Applying Services..."
                         kubectl apply -f k8s-service.yaml
                         
                         echo "📈 Applying HPA..."
                         kubectl apply -f k8s-hpa.yaml
+                        
+                        # Immediate deployment verification
+                        echo "🔍 Verifying deployment was applied correctly..."
+                        kubectl get deployments
+                        kubectl describe deployment devops-chatbot-deployment | grep -A 5 -B 5 "Image"
                         
                         echo "✅ Kubernetes deployment complete"
                     '''
@@ -314,6 +418,22 @@ pipeline {
                         # Check pod logs for any startup issues
                         echo "📝 Checking pod startup logs..."
                         kubectl logs -l app=devops-chatbot --tail=20 || echo "No logs available yet"
+                        
+                        # Check for image pull issues specifically
+                        echo "🔍 Checking for image pull issues..."
+                        if kubectl get events --field-selector reason=Failed | grep -i "pull\|image"; then
+                            echo "❌ Image pull issues detected:"
+                            kubectl get events --field-selector reason=Failed | grep -i "pull\|image"
+                            
+                            echo "🔍 Available images in Minikube:"
+                            eval $(minikube docker-env)
+                            docker images | grep devops-chatbot
+                            
+                            echo "🔍 Pod details for image issues:"
+                            kubectl describe pods -l app=devops-chatbot | grep -A10 -B10 -i "image"
+                            
+                            # Don't exit here, let the wait timeout handle it
+                        fi
                         
                         # Wait a bit more for image pull if needed
                         echo "⏳ Waiting for image pull and container creation..."
