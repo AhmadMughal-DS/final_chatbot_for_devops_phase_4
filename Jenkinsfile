@@ -4,16 +4,7 @@ pipeline {
     
     environment {
         PROJECT_NAME = 'devops_chatbot_pipeline'
-        GITHUB_REPO = 'https://                            # Try one last reset with aggressive cleanup
-                            echo "🔧 Final attempt - complete aggressive reset..."
-                            minikube delete --all || true
-                            docker system prune -af --volumes || true
-                            pkill -f minikube || true
-                            pkill -f kubectl || true
-                            pkill -f dockerd || true
-                            sleep 20
-                            minikube start --driver=docker --memory=1024 --cpus=1 --force
-                            sleep 90com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
+        GITHUB_REPO = 'https://github.com/AhmadMughal-DS/final_chatbot_for_devops_phase_4'
         KUBE_NAMESPACE = 'default'
         APP_NAME = 'devops-chatbot'
         IMAGE_NAME = 'devops-chatbot:latest'
