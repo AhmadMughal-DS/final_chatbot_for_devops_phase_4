@@ -27,10 +27,22 @@ pipeline {
                 echo 'Building Docker image for Kubernetes deployment'
                 
                 // Navigate to the cloned repository directory
-                dir('final_chatbot_for_devops_phase_3') {
+                dir('final_chatbot_for_devops_phase_4') {
                     sh '''
-                        # Check if Minikube is running
-                        minikube status || (echo "Starting Minikube..." && minikube start)
+                        # Wait for Minikube to be fully ready
+                        echo "⏳ Waiting for Minikube to be ready..."
+                        sleep 30
+                        
+                        # Check Minikube status with retry
+                        for i in {1..5}; do
+                            if minikube status; then
+                                echo "✅ Minikube is ready!"
+                                break
+                            else
+                                echo "⏳ Waiting for Minikube... (attempt $i/5)"
+                                sleep 15
+                            fi
+                        done
                         
                         # Set Docker environment to use Minikube's Docker daemon
                         eval $(minikube docker-env)
@@ -52,7 +64,7 @@ pipeline {
                 echo 'Deploying application to Kubernetes (Minikube)'
                 
                 // Navigate to the cloned repository directory
-                dir('final_chatbot_for_devops_phase_3') {
+                dir('final_chatbot_for_devops_phase_4') {
                     sh '''
                         echo "🚀 Starting Kubernetes Deployment..."
                         
@@ -94,7 +106,7 @@ pipeline {
             steps {
                 echo 'Verifying Kubernetes deployment'
                 
-                dir('final_chatbot_for_devops_phase_3') {
+                dir('final_chatbot_for_devops_phase_4') {
                     sh '''
                         echo "⏳ Waiting for deployment to be ready..."
                         kubectl wait --for=condition=available --timeout=300s deployment/devops-chatbot-deployment
@@ -116,8 +128,9 @@ pipeline {
                         # Get application URL
                         echo "🌐 Application Access Information:"
                         MINIKUBE_IP=$(minikube ip)
-                        NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}')
+                        NODE_PORT=$(kubectl get service devops-chatbot-nodeport -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
                         echo "🚀 Access your application at: http://$MINIKUBE_IP:$NODE_PORT"
+                        echo "📝 Note: If NodePort detection fails, try: http://$MINIKUBE_IP:30080"
                     '''
                 }
             }
@@ -128,7 +141,7 @@ pipeline {
                 echo 'Running Frontend Chat Tests on Kubernetes'
                 
                 // Navigate to the cloned repository directory
-                dir('final_chatbot_for_devops_phase_3') {
+                dir('final_chatbot_for_devops_phase_4') {
                     // Install Chrome and dependencies for Selenium
                     sh '''
                         # Update package list
@@ -161,7 +174,7 @@ pipeline {
                         
                         # Get application URL for testing
                         MINIKUBE_IP=$(minikube ip)
-                        NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}')
+                        NODE_PORT=$(kubectl get service devops-chatbot-nodeport -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
                         export TEST_URL="http://$MINIKUBE_IP:$NODE_PORT"
                         
                         echo "🎯 Testing Kubernetes deployment at: $TEST_URL"
@@ -260,7 +273,7 @@ EOF
                 echo 'Setting up automatic Kubernetes cleanup after 10 minutes'
                 
                 // Navigate to the cloned repository directory
-                dir('final_chatbot_for_devops_phase_3') {
+                dir('final_chatbot_for_devops_phase_4') {
                     sh '''
                         echo "⏰ Kubernetes resources will be cleaned up after 10 minutes..."
                         (sleep 600 && kubectl delete -f k8s-hpa.yaml --ignore-not-found=true && kubectl delete -f k8s-service.yaml --ignore-not-found=true && kubectl delete -f k8s-deployment.yaml --ignore-not-found=true && kubectl delete -f k8s-pvc.yaml --ignore-not-found=true) &
@@ -294,8 +307,9 @@ EOF
             sh '''
                 echo "🌐 Access your application:"
                 MINIKUBE_IP=$(minikube ip) || echo "Could not get Minikube IP"
-                NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null) || echo "Could not get NodePort"
+                NODE_PORT=$(kubectl get service devops-chatbot-nodeport -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
                 echo "URL: http://$MINIKUBE_IP:$NODE_PORT"
+                echo "📝 Fallback URL: http://$MINIKUBE_IP:30080"
                 echo "📈 Auto-scaling is enabled with HPA"
             '''
         }
