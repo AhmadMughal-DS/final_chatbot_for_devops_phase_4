@@ -398,9 +398,9 @@ pipeline {
                         
                         # Check for image pull issues specifically
                         echo "🔍 Checking for image pull issues..."
-                        if kubectl get events --field-selector reason=Failed | grep -i "pull\|image"; then
+                        if kubectl get events --field-selector reason=Failed | grep -i "pull|image"; then
                             echo "❌ Image pull issues detected:"
-                            kubectl get events --field-selector reason=Failed | grep -i "pull\|image"
+                            kubectl get events --field-selector reason=Failed | grep -i "pull|image"
                             
                             echo "🔍 Available images in Minikube:"
                             eval $(minikube docker-env)
