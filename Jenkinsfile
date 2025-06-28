@@ -52,16 +52,13 @@ pipeline {
                         ping -c 3 8.8.8.8 || echo "Network connectivity issue detected"
                         nslookup pypi.org || echo "DNS resolution issue detected"
                         
-                        # Build Docker image inside Minikube with network troubleshooting
-                        echo "🔨 Building Docker image..."
-                        docker build -t ${IMAGE_NAME} . || (
-                            echo "❌ Docker build failed, trying with fallback Dockerfile..."
-                            # Try building with fallback Dockerfile
-                            docker build -f Dockerfile.fallback -t ${IMAGE_NAME} . ||
-                            # Try with host network
-                            docker build --network=host -t ${IMAGE_NAME} . ||
-                            # Try with simplified requirements
-                            (cp requirements-simple.txt requirements.txt && docker build --no-cache -t ${IMAGE_NAME} .)
+                        # Make build script executable and run it
+                        chmod +x scripts/build_docker.sh
+                        ./scripts/build_docker.sh || (
+                            echo "❌ Script failed, trying manual build..."
+                            # Manual fallback
+                            docker build --dns=8.8.8.8 --dns=8.8.4.4 -t ${IMAGE_NAME} . ||
+                            docker build --network=host -t ${IMAGE_NAME} .
                         )
                         
                         # Verify image is built

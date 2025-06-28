@@ -1,9 +1,9 @@
 # Dockerfile (root of your repo)
 FROM python:3.11
 
-# Fix DNS and network issues
-RUN echo "nameserver 8.8.8.8" >> /etc/resolv.conf && \
-    echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+# Set DNS servers via environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
