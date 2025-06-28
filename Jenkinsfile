@@ -35,14 +35,27 @@ pipeline {
                         
                         # Check Minikube status with retry
                         for i in {1..5}; do
-                            if minikube status; then
+                            if minikube status | grep -q "kubelet: Running"; then
                                 echo "✅ Minikube is ready!"
                                 break
                             else
                                 echo "⏳ Waiting for Minikube... (attempt $i/5)"
+                                if [ $i -eq 3 ]; then
+                                    echo "🔄 Attempting Minikube restart..."
+                                    minikube stop || true
+                                    minikube start --driver=docker --memory=3900 --cpus=2
+                                fi
                                 sleep 15
                             fi
                         done
+                        
+                        # Final Minikube check
+                        if ! minikube status | grep -q "kubelet: Running"; then
+                            echo "❌ Minikube failed to start properly"
+                            minikube status || true
+                            minikube logs || true
+                            exit 1
+                        fi
                         
                         # Set Docker environment to use Minikube's Docker daemon
                         eval $(minikube docker-env)
@@ -79,8 +92,41 @@ pipeline {
                     sh '''
                         echo "🚀 Starting Kubernetes Deployment..."
                         
-                        # Check kubectl connectivity
-                        kubectl cluster-info
+                        # Check Minikube status and restart if needed
+                        echo "🔍 Checking Minikube cluster status..."
+                        if ! minikube status | grep -q "kubelet: Running"; then
+                            echo "⚠️ Minikube not running properly, restarting..."
+                            minikube stop || true
+                            minikube start --driver=docker --memory=3900 --cpus=2
+                            sleep 30
+                        fi
+                        
+                        # Wait for kubectl to be ready with retry
+                        echo "⏳ Waiting for kubectl connectivity..."
+                        for i in {1..10}; do
+                            if kubectl cluster-info --request-timeout=10s; then
+                                echo "✅ kubectl is ready!"
+                                break
+                            else
+                                echo "⏳ Waiting for kubectl... (attempt $i/10)"
+                                if [ $i -eq 5 ]; then
+                                    echo "🔄 Restarting Minikube cluster..."
+                                    minikube stop || true
+                                    minikube start --driver=docker --memory=3900 --cpus=2
+                                fi
+                                sleep 15
+                            fi
+                        done
+                        
+                        # Final check
+                        if ! kubectl cluster-info --request-timeout=10s; then
+                            echo "❌ kubectl connectivity failed after retries"
+                            echo "🔍 Minikube status:"
+                            minikube status || true
+                            echo "🔍 Kubectl configuration:"
+                            kubectl config view || true
+                            exit 1
+                        fi
                         
                         # Clean up any existing deployment
                         kubectl delete -f k8s-hpa.yaml --ignore-not-found=true
