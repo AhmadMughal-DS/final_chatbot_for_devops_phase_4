@@ -458,10 +458,28 @@ pipeline {
                         
                         # Get application URL
                         echo "🌐 Application Access Information:"
-                        MINIKUBE_IP=$(minikube ip)
-                        NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
-                        echo "🚀 Access your application at: http://$MINIKUBE_IP:$NODE_PORT"
-                        echo "📝 Note: If NodePort detection fails, try: http://$MINIKUBE_IP:30080"
+                        
+                        # Check if running on AWS EC2 or local Minikube
+                        if curl -s --connect-timeout 5 http://169.254.169.254/latest/meta-data/public-ipv4 >/dev/null 2>&1; then
+                            # Running on AWS EC2
+                            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "3.14.84.26")
+                            PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "172.31.0.45")
+                            NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
+                            
+                            echo "☁️ Running on AWS EC2"
+                            echo "🌍 Public IP: $PUBLIC_IP"
+                            echo "🏠 Private IP: $PRIVATE_IP"
+                            echo "🚀 Access your application at: http://$PUBLIC_IP:$NODE_PORT"
+                            echo "📝 Internal access: http://$PRIVATE_IP:$NODE_PORT"
+                            echo "🔥 Make sure Security Group allows port $NODE_PORT inbound traffic"
+                        else
+                            # Running on Minikube
+                            MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "localhost")
+                            NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
+                            echo "🖥️ Running on Minikube"
+                            echo "🚀 Access your application at: http://$MINIKUBE_IP:$NODE_PORT"
+                            echo "📝 Note: If NodePort detection fails, try: http://$MINIKUBE_IP:30080"
+                        fi
                     '''
                 }
             }
@@ -567,22 +585,125 @@ EOF
                         echo "📋 Deployment Summary:"
                         echo "===================="
                         
+                        # Detect environment (AWS EC2 vs Local Minikube)
+                        echo "🔍 Detecting deployment environment..."
+                        
+                        # Check if we're on AWS EC2
+                        AWS_PUBLIC_IP=""
+                        AWS_PRIVATE_IP=""
+                        IS_AWS_EC2=false
+                        
+                        # Method 1: Check AWS metadata service
+                        if curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 >/dev/null 2>&1; then
+                            AWS_PUBLIC_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+                            AWS_PRIVATE_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                            IS_AWS_EC2=true
+                            echo "✅ AWS EC2 instance detected via metadata service"
+                        fi
+                        
+                        # Method 2: Check for known EC2 characteristics
+                        if [ "$IS_AWS_EC2" = false ]; then
+                            if grep -q "amazon\\|aws\\|ec2" /sys/hypervisor/uuid 2>/dev/null || \\
+                               grep -q "amazon\\|aws\\|ec2" /sys/devices/virtual/dmi/id/product_uuid 2>/dev/null || \\
+                               [ -f /opt/aws/bin/ec2-metadata ] || \\
+                               which ec2-metadata >/dev/null 2>&1; then
+                                IS_AWS_EC2=true
+                                echo "✅ AWS EC2 instance detected via system characteristics"
+                                AWS_PUBLIC_IP=$(wget -qO- http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+                                AWS_PRIVATE_IP=$(wget -qO- http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                            fi
+                        fi
+                        
+                        # Method 3: Check network interfaces for typical AWS patterns
+                        if [ "$IS_AWS_EC2" = false ]; then
+                            CURRENT_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "")
+                            if [[ "$CURRENT_IP" =~ ^172\\.3[0-1]\\. ]] || [[ "$CURRENT_IP" =~ ^10\\. ]] || [[ "$CURRENT_IP" =~ ^192\\.168\\. ]]; then
+                                if curl -s --max-time 2 http://169.254.169.254/ >/dev/null 2>&1; then
+                                    IS_AWS_EC2=true
+                                    AWS_PRIVATE_IP="$CURRENT_IP"
+                                    echo "✅ AWS EC2 instance detected via network configuration"
+                                fi
+                            fi
+                        fi
+                        
                         # Get deployment information
-                        MINIKUBE_IP=$(minikube ip)
                         NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
                         
-                        echo "🌐 Application URL: http://$MINIKUBE_IP:$NODE_PORT"
+                        if [ "$IS_AWS_EC2" = true ]; then
+                            echo "🌩️ AWS EC2 Environment Detected!"
+                            echo "======================================"
+                            echo "🌐 Public IP: ${AWS_PUBLIC_IP:-'Not available'}"
+                            echo "🏠 Private IP: ${AWS_PRIVATE_IP:-'Not available'}"
+                            echo "🚪 NodePort: $NODE_PORT"
+                            echo ""
+                            echo "🔗 Access URLs:"
+                            if [ -n "$AWS_PUBLIC_IP" ]; then
+                                echo "   📡 External (Public): http://$AWS_PUBLIC_IP:$NODE_PORT"
+                                echo "   🌍 Internet Access: http://$AWS_PUBLIC_IP:$NODE_PORT"
+                            fi
+                            if [ -n "$AWS_PRIVATE_IP" ]; then
+                                echo "   🏠 Internal (Private): http://$AWS_PRIVATE_IP:$NODE_PORT"
+                                echo "   🔒 VPC Access: http://$AWS_PRIVATE_IP:$NODE_PORT"
+                            fi
+                            echo ""
+                            echo "⚠️ IMPORTANT: Ensure AWS Security Group allows inbound traffic on port $NODE_PORT"
+                            echo "   - Protocol: TCP"
+                            echo "   - Port Range: $NODE_PORT"
+                            echo "   - Source: 0.0.0.0/0 (for public access)"
+                            echo ""
+                            echo "🔍 Security Group Check Commands:"
+                            echo "   aws ec2 describe-security-groups --group-ids <your-sg-id>"
+                            echo "   aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port $NODE_PORT --cidr 0.0.0.0/0"
+                        else
+                            # Local Minikube environment
+                            MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "localhost")
+                            echo "🖥️ Local Minikube Environment"
+                            echo "=============================="
+                            echo "🌐 Minikube IP: $MINIKUBE_IP"
+                            echo "🚪 NodePort: $NODE_PORT"
+                            echo "🔗 Application URL: http://$MINIKUBE_IP:$NODE_PORT"
+                        fi
+                        
+                        echo ""
                         echo "🐳 Docker Image: ${IMAGE_NAME}"
                         
                         # Show current status
-                        echo "📊 Current Status:"
+                        echo ""
+                        echo "📊 Current Kubernetes Status:"
+                        echo "============================="
                         kubectl get pods -l app=devops-chatbot
                         kubectl get services devops-chatbot-service
                         kubectl get hpa devops-chatbot-hpa 2>/dev/null || echo "HPA not available"
                         
+                        # Test connectivity from the instance itself
+                        echo ""
+                        echo "🧪 Testing Local Connectivity:"
+                        echo "=============================="
+                        if [ "$IS_AWS_EC2" = true ] && [ -n "$AWS_PRIVATE_IP" ]; then
+                            TEST_URL="http://$AWS_PRIVATE_IP:$NODE_PORT"
+                        else
+                            TEST_URL="http://localhost:$NODE_PORT"
+                        fi
+                        
+                        echo "🎯 Testing: $TEST_URL"
+                        if curl -s --max-time 10 "$TEST_URL" >/dev/null 2>&1; then
+                            echo "✅ Application is responding locally!"
+                        else
+                            echo "❌ Application not responding locally"
+                            echo "🔍 Checking pod status..."
+                            kubectl describe pods -l app=devops-chatbot | grep -A5 -B5 "Events:"
+                        fi
+                        
+                        echo ""
                         echo "✅ Application is now running persistently!"
-                        echo "💡 To stop the application, manually run: kubectl delete -f k8s-deployment.yaml"
-                        echo "� To restart: kubectl apply -f k8s-deployment.yaml"
+                        echo "💡 To stop the application manually:"
+                        echo "   kubectl delete -f k8s-deployment.yaml"
+                        echo "   kubectl delete -f k8s-service.yaml"
+                        echo "   kubectl delete -f k8s-hpa.yaml"
+                        echo "🔄 To restart:"
+                        echo "   kubectl apply -f k8s-deployment.yaml"
+                        echo "   kubectl apply -f k8s-service.yaml"
+                        echo "   kubectl apply -f k8s-hpa.yaml"
                     '''
                 }
             }
@@ -612,10 +733,36 @@ EOF
             // Show access information
             sh '''
                 echo "🌐 Access your application:"
-                MINIKUBE_IP=$(minikube ip) || echo "Could not get Minikube IP"
+                
+                # Detect AWS EC2 environment
+                IS_AWS_EC2=false
+                AWS_PUBLIC_IP=""
+                AWS_PRIVATE_IP=""
+                
+                if curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 >/dev/null 2>&1; then
+                    IS_AWS_EC2=true
+                    AWS_PUBLIC_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+                    AWS_PRIVATE_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                fi
+                
                 NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
-                echo "URL: http://$MINIKUBE_IP:$NODE_PORT"
-                echo "📝 Fallback URL: http://$MINIKUBE_IP:30080"
+                
+                if [ "$IS_AWS_EC2" = true ]; then
+                    echo "🌩️ AWS EC2 Deployment - Access URLs:"
+                    if [ -n "$AWS_PUBLIC_IP" ]; then
+                        echo "   📡 Public Access: http://$AWS_PUBLIC_IP:$NODE_PORT"
+                    fi
+                    if [ -n "$AWS_PRIVATE_IP" ]; then
+                        echo "   🏠 Private Access: http://$AWS_PRIVATE_IP:$NODE_PORT"
+                    fi
+                    echo "⚠️ Ensure Security Group allows port $NODE_PORT"
+                else
+                    MINIKUBE_IP=$(minikube ip) || echo "Could not get Minikube IP"
+                    echo "🖥️ Local Minikube Deployment:"
+                    echo "   URL: http://$MINIKUBE_IP:$NODE_PORT"
+                    echo "   📝 Fallback URL: http://$MINIKUBE_IP:30080"
+                fi
+                
                 echo "📈 Auto-scaling is enabled with HPA"
                 echo "🔒 Application will remain running persistently"
                 echo ""
