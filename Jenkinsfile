@@ -90,7 +90,7 @@ pipeline {
                         docker images | grep devops-chatbot
                         
                         # Check specifically for our build tag
-                        if docker images | grep -q "${IMAGE_NAME}"; then
+                        if docker images | grep devops-chatbot | grep -q "build-${BUILD_NUMBER}"; then
                             echo "✅ Build-specific image ${IMAGE_NAME} available"
                         else
                             echo "❌ Build-specific image ${IMAGE_NAME} not found, attempting to tag..."
@@ -306,20 +306,21 @@ pipeline {
                         }
                         
                         # Specifically check for our tagged image
-                        if docker images | grep -q "${IMAGE_NAME}"; then
+                        echo "🔍 Checking for build-specific image tag..."
+                        if docker images | grep devops-chatbot | grep -q "build-${BUILD_NUMBER}"; then
                             echo "✅ Docker image ${IMAGE_NAME} is available in Minikube"
                             echo "📦 Image details:"
                             docker images | grep devops-chatbot
                         else
-                            echo "❌ Docker image ${IMAGE_NAME} not found"
+                            echo "❌ Build-specific image tag not found"
                             echo "Available images:"
                             docker images | grep devops-chatbot || echo "No devops-chatbot images found"
                             
                             # Try to tag from latest if it exists
-                            if docker images | grep -q "devops-chatbot:latest"; then
+                            if docker images | grep devops-chatbot | grep -q "latest"; then
                                 echo "🔄 Attempting to tag from latest..."
                                 docker tag devops-chatbot:latest ${IMAGE_NAME}
-                                if docker images | grep -q "${IMAGE_NAME}"; then
+                                if docker images | grep devops-chatbot | grep -q "build-${BUILD_NUMBER}"; then
                                     echo "✅ Successfully tagged image as ${IMAGE_NAME}"
                                 else
                                     echo "❌ Failed to tag image"
