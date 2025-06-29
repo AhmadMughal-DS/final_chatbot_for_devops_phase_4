@@ -27,6 +27,10 @@ try:
     # Note: Connection validation will happen on first actual use
     print("MongoDB client initialized")
     db = client.devops_assignment
+
+
+
+    
 except Exception as e:
     print(f"MongoDB connection error: {str(e)}")
     # Continue with a dummy DB for development purposes if needed
