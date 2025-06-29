@@ -292,6 +292,35 @@ async def read_root(request: Request):
         """
         return HTMLResponse(content=html_content)
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes probes"""
+    try:
+        # Basic health checks
+        health_status = {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "service": "devops-chatbot",
+            "version": "1.0.0"
+        }
+        
+        # Test MongoDB connection
+        try:
+            # Simple ping to check if MongoDB is accessible
+            await client.admin.command('ping')
+            health_status["database"] = "connected"
+        except Exception as e:
+            health_status["database"] = f"error: {str(e)}"
+            health_status["status"] = "degraded"
+        
+        return health_status
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
 @app.post("/signup")
 async def signup(request: Request, email: EmailStr = Form(...), password: str = Form(...)):
     try:

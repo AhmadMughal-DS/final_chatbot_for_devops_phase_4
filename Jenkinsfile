@@ -556,16 +556,33 @@ EOF
             }
         }
         
-        stage('Auto-Cleanup After 10 Minutes') {
+        stage('Deployment Summary & Persistent Setup') {
             steps {
-                echo 'Setting up automatic Kubernetes cleanup after 10 minutes'
+                echo 'Setting up persistent Kubernetes deployment'
                 
                 // Navigate to the cloned repository directory
                 dir('final_chatbot_for_devops_phase_4') {
                     sh '''
-                        echo "⏰ Kubernetes resources will be cleaned up after 10 minutes..."
-                        (sleep 600 && kubectl delete -f k8s-hpa.yaml --ignore-not-found=true && kubectl delete -f k8s-service.yaml --ignore-not-found=true && kubectl delete -f k8s-deployment.yaml --ignore-not-found=true && kubectl delete -f k8s-pvc.yaml --ignore-not-found=true) &
-                        echo "🗑️ Auto-cleanup scheduled!"
+                        echo "🚀 Deployment completed successfully!"
+                        echo "📋 Deployment Summary:"
+                        echo "===================="
+                        
+                        # Get deployment information
+                        MINIKUBE_IP=$(minikube ip)
+                        NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
+                        
+                        echo "🌐 Application URL: http://$MINIKUBE_IP:$NODE_PORT"
+                        echo "🐳 Docker Image: ${IMAGE_NAME}"
+                        
+                        # Show current status
+                        echo "📊 Current Status:"
+                        kubectl get pods -l app=devops-chatbot
+                        kubectl get services devops-chatbot-service
+                        kubectl get hpa devops-chatbot-hpa 2>/dev/null || echo "HPA not available"
+                        
+                        echo "✅ Application is now running persistently!"
+                        echo "💡 To stop the application, manually run: kubectl delete -f k8s-deployment.yaml"
+                        echo "� To restart: kubectl apply -f k8s-deployment.yaml"
                     '''
                 }
             }
@@ -589,7 +606,8 @@ EOF
         success {
             echo '🎉 Kubernetes CI/CD Pipeline completed successfully!'
             echo '✅ All stages passed including Kubernetes deployment and testing'
-            echo '� Application is deployed on Kubernetes with auto-scaling'
+            echo '🚀 Application is deployed on Kubernetes with auto-scaling and PERSISTENT DEPLOYMENT'
+            echo '💡 The application will continue running until manually stopped'
             
             // Show access information
             sh '''
@@ -599,6 +617,12 @@ EOF
                 echo "URL: http://$MINIKUBE_IP:$NODE_PORT"
                 echo "📝 Fallback URL: http://$MINIKUBE_IP:30080"
                 echo "📈 Auto-scaling is enabled with HPA"
+                echo "🔒 Application will remain running persistently"
+                echo ""
+                echo "To manually stop the application:"
+                echo "  kubectl delete -f k8s-deployment.yaml"
+                echo "  kubectl delete -f k8s-service.yaml"
+                echo "  kubectl delete -f k8s-hpa.yaml"
             '''
         }
         failure {
