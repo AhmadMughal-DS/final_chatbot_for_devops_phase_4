@@ -462,16 +462,42 @@ pipeline {
                         # Check if running on AWS EC2 or local Minikube
                         if curl -s --connect-timeout 5 http://169.254.169.254/latest/meta-data/public-ipv4 >/dev/null 2>&1; then
                             # Running on AWS EC2
-                            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "3.14.84.26")
-                            PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "172.31.0.45")
+                            echo "☁️ Running on AWS EC2"
+                            
+                            # Get IPs with multiple methods and fallbacks
+                            PUBLIC_IP=$(curl -s --max-time 5 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+                            PRIVATE_IP=$(curl -s --max-time 5 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                            
+                            # Try alternative methods if metadata service fails
+                            if [ -z "$PUBLIC_IP" ]; then
+                                PUBLIC_IP=$(wget -qO- --timeout=5 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+                            fi
+                            if [ -z "$PRIVATE_IP" ]; then
+                                PRIVATE_IP=$(wget -qO- --timeout=5 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                            fi
+                            
+                            # Get external IP via external service if metadata fails
+                            if [ -z "$PUBLIC_IP" ]; then
+                                PUBLIC_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 ipinfo.io/ip 2>/dev/null || echo "3.14.84.26")
+                            fi
+                            
+                            # Get internal IP from hostname if metadata fails
+                            if [ -z "$PRIVATE_IP" ]; then
+                                PRIVATE_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "172.31.0.45")
+                            fi
+                            
                             NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
                             
-                            echo "☁️ Running on AWS EC2"
                             echo "🌍 Public IP: $PUBLIC_IP"
-                            echo "🏠 Private IP: $PRIVATE_IP"
-                            echo "🚀 Access your application at: http://$PUBLIC_IP:$NODE_PORT"
-                            echo "📝 Internal access: http://$PRIVATE_IP:$NODE_PORT"
+                            echo "� Private IP: $PRIVATE_IP"
+                            echo "🚪 NodePort: $NODE_PORT"
+                            echo ""
+                            echo "🚀 Access your application at:"
+                            echo "   📡 External: http://$PUBLIC_IP:$NODE_PORT"
+                            echo "   🏠 Internal: http://$PRIVATE_IP:$NODE_PORT"
+                            echo ""
                             echo "🔥 Make sure Security Group allows port $NODE_PORT inbound traffic"
+                            echo "🔧 Test connectivity: curl http://$PUBLIC_IP:$NODE_PORT"
                         else
                             # Running on Minikube
                             MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "localhost")
@@ -593,12 +619,29 @@ EOF
                         AWS_PRIVATE_IP=""
                         IS_AWS_EC2=false
                         
-                        # Method 1: Check AWS metadata service
+                        # Method 1: Check AWS metadata service with improved error handling
                         if curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 >/dev/null 2>&1; then
-                            AWS_PUBLIC_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
-                            AWS_PRIVATE_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                            AWS_PUBLIC_IP=$(curl -s --max-time 5 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+                            AWS_PRIVATE_IP=$(curl -s --max-time 5 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
                             IS_AWS_EC2=true
                             echo "✅ AWS EC2 instance detected via metadata service"
+                            
+                            # Try alternative methods if metadata service returns empty
+                            if [ -z "$AWS_PUBLIC_IP" ]; then
+                                echo "⚠️ Public IP empty, trying alternative methods..."
+                                AWS_PUBLIC_IP=$(wget -qO- --timeout=5 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+                                if [ -z "$AWS_PUBLIC_IP" ]; then
+                                    AWS_PUBLIC_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 ipinfo.io/ip 2>/dev/null || echo "3.14.84.26")
+                                fi
+                            fi
+                            
+                            if [ -z "$AWS_PRIVATE_IP" ]; then
+                                echo "⚠️ Private IP empty, trying alternative methods..."
+                                AWS_PRIVATE_IP=$(wget -qO- --timeout=5 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                                if [ -z "$AWS_PRIVATE_IP" ]; then
+                                    AWS_PRIVATE_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "172.31.0.45")
+                                fi
+                            fi
                         fi
                         
                         # Method 2: Check for known EC2 characteristics
@@ -734,15 +777,23 @@ EOF
             sh '''
                 echo "🌐 Access your application:"
                 
-                # Detect AWS EC2 environment
+                # Detect AWS EC2 environment with improved IP detection
                 IS_AWS_EC2=false
                 AWS_PUBLIC_IP=""
                 AWS_PRIVATE_IP=""
                 
                 if curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 >/dev/null 2>&1; then
                     IS_AWS_EC2=true
-                    AWS_PUBLIC_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
-                    AWS_PRIVATE_IP=$(curl -s --max-time 3 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                    AWS_PUBLIC_IP=$(curl -s --max-time 5 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+                    AWS_PRIVATE_IP=$(curl -s --max-time 5 http://169.254.169.254/latest/meta-data/local-ipv4 2>/dev/null || echo "")
+                    
+                    # Try alternative methods if metadata returns empty
+                    if [ -z "$AWS_PUBLIC_IP" ]; then
+                        AWS_PUBLIC_IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null || curl -s --max-time 5 ipinfo.io/ip 2>/dev/null || echo "3.14.84.26")
+                    fi
+                    if [ -z "$AWS_PRIVATE_IP" ]; then
+                        AWS_PRIVATE_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || echo "172.31.0.45")
+                    fi
                 fi
                 
                 NODE_PORT=$(kubectl get service devops-chatbot-service -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30080")
