@@ -27,12 +27,12 @@ TEST_EMAIL = "ahmadzafar392@gmail.com"
 TEST_PASSWORD = "123"
 user_id = None
 test_query = "Who is Qasim Malik?"
-chatbot_url = "http://localhost:8000/ask-devops-doubt"
+chatbot_url = "http://localhost:8002/ask-devops-doubt"
 
 try:
     # Step 1: Login to get user_id
     print("📡 Connecting to FastAPI application...")
-    driver.get("http://localhost:8000")
+    driver.get("http://localhost:8002")
     time.sleep(2)
     
     print("🖱️ Navigating to Sign In...")
@@ -94,7 +94,7 @@ try:
             
         # Test chat history
         print("\n📜 Testing chat history...")
-        history_url = f"http://localhost:8000/chat-history?user_id={user_id}"
+        history_url = f"http://localhost:8002/chat-history?user_id={user_id}"
         history_response = requests.get(history_url, timeout=10)
         
         if history_response.status_code == 200:
@@ -143,6 +143,6 @@ finally:
         print(f"✅ Login: Success (User ID: {user_id})")
         print(f"🤖 Chatbot Query: '{test_query}'")
         print(f"🔗 API Endpoint: {chatbot_url}")
-        print(f"📊 User can test more queries at: http://localhost:8000/welcome?user_id={user_id}")
+        print(f"📊 User can test more queries at: http://localhost:8002/welcome?user_id={user_id}")
     else:
         print("\n❌ Test incomplete - login failed")
