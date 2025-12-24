@@ -7,13 +7,9 @@ from groq import Groq
 import os
 from openai import OpenAI
 from typing import Optional
-
-
-
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson.json_util import dumps, loads
 from pymongo import MongoClient
-
 from bson import ObjectId
 from datetime import datetime
 
