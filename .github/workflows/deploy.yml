@@ -1,0 +1,33 @@
+name: DevOps Chatbot CI/CD
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Check if directory exists, if not clone the repo
+            if [ ! -d "final_chatbot_for_devops_phase_4" ]; then
+              git clone https://${{ secrets.GH_PAT }}@github.com/${{ secrets.GITHUB_REPO }}/final_chatbot_for_devops_phase_4.git
+            fi
+            
+            # Navigate to directory
+            cd final_chatbot_for_devops_phase_4
+            
+            # Checkout master branch and pull latest code
+            git checkout master
+            git pull https://${{ secrets.GH_PAT }}@github.com/${{ secrets.GITHUB_REPO }}/final_chatbot_for_devops_phase_4.git master
+            
+            # Deploy with docker compose
+            docker compose down 
+            docker compose up -d --build

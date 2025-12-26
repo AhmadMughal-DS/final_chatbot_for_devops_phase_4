@@ -3,80 +3,340 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sign Up</title>
+    <title>Sign Up - DevOps AI Chatbot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: Arial, sans-serif;
+        font-family: 'Inter', sans-serif;
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
-        background-color: #f4f4f4;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        position: relative;
+        overflow: hidden;
       }
+
+      body::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+          radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3), transparent 50%),
+          radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.3), transparent 50%);
+        animation: pulse 15s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+      }
+
       .container {
-        min-width: 300px;
-        max-width: 500px;
-        padding: 20px;
-        background: white;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
+        position: relative;
+        z-index: 1;
+        min-width: 320px;
+        max-width: 450px;
+        width: 90%;
+        padding: 50px 40px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 
+          0 20px 60px rgba(0, 0, 0, 0.3),
+          0 0 0 1px rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
         text-align: center;
+        animation: slideIn 0.6s ease-out;
       }
-      .error {
-        color: red;
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95) translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      .logo {
+        width: 70px;
+        height: 70px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 35px;
+        color: white;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+      }
+
+      h2 {
         margin-bottom: 10px;
+        color: #1a1a2e;
+        font-size: 28px;
+        font-weight: 700;
       }
+
+      .subtitle {
+        color: #64748b;
+        font-size: 14px;
+        margin-bottom: 35px;
+        font-weight: 400;
+      }
+
+      .error {
+        background: #fee;
+        border: 1px solid #fcc;
+        color: #c33;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .error i {
+        font-size: 18px;
+      }
+
+      .input-group {
+        position: relative;
+        margin-bottom: 20px;
+      }
+
+      .input-group i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 16px;
+      }
+
       input {
-        width: 300px;
-        padding: 10px;
-        margin: 8px 0px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
+        width: 100%;
+        padding: 16px 16px 16px 50px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 15px;
+        font-family: 'Inter', sans-serif;
+        transition: all 0.3s ease;
+        background: white;
       }
+
+      input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      }
+
+      input::placeholder {
+        color: #cbd5e1;
+      }
+
       button {
-        width: 300px;
-        padding: 10px;
-        margin: 10px 0px;
-        background: #007bff;
+        width: 100%;
+        padding: 16px;
+        margin: 25px 0 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        border-radius: 5px;
+        border-radius: 12px;
         cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        position: relative;
+        overflow: hidden;
       }
+
+      button::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+      }
+
+      button:hover::before {
+        width: 300px;
+        height: 300px;
+      }
+
       button:hover {
-        background: #0056b3;
+        transform: translateY(-2px);
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button span {
+        position: relative;
+        z-index: 1;
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        margin: 25px 0;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e2e8f0;
+      }
+
+      .divider::before {
+        margin-right: 15px;
+      }
+
+      .divider::after {
+        margin-left: 15px;
       }
 
       .toggle-link {
-        display: block;
-        margin-top: 15px;
-        color: #007bff;
+        display: inline-block;
+        margin-top: 10px;
+        color: #667eea;
         text-decoration: none;
         font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
       }
+
       .toggle-link:hover {
+        color: #764ba2;
         text-decoration: underline;
+      }
+
+      .back-home {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+        color: #94a3b8;
+        text-decoration: none;
+        font-size: 13px;
+        transition: all 0.3s ease;
+      }
+
+      .back-home:hover {
+        color: #667eea;
+      }
+
+      .password-strength {
+        margin-top: 8px;
+        text-align: left;
+        font-size: 12px;
+      }
+
+      .strength-bar {
+        height: 4px;
+        background: #e2e8f0;
+        border-radius: 2px;
+        margin-top: 6px;
+        overflow: hidden;
+      }
+
+      .strength-fill {
+        height: 100%;
+        width: 0%;
+        transition: all 0.3s ease;
+      }
+
+      .strength-weak { width: 33%; background: #ef4444; }
+      .strength-medium { width: 66%; background: #f59e0b; }
+      .strength-strong { width: 100%; background: #10b981; }
+
+      @media (max-width: 500px) {
+        .container {
+          padding: 40px 30px;
+        }
+        h2 {
+          font-size: 24px;
+        }
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h2>Sign Up</h2>
+      <div class="logo">
+        <i class="fas fa-user-plus"></i>
+      </div>
+      <h2>Create Account</h2>
+      <p class="subtitle">Join us to start using your DevOps assistant</p>
+      
       {% if error %}
-      <div class="error">{{ error }}</div>
-      <a href="/signin" class="login-link">Already have an account? Login</a>
+      <div class="error">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error }}</span>
+      </div>
       {% endif %}
+      
       <form action="/signup" method="post">
-        <input type="email" name="email" placeholder="Email" required />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          required
-        />
-        <button type="submit">Submit</button>
+        <div class="input-group">
+          <i class="fas fa-envelope"></i>
+          <input 
+            type="email" 
+            name="email" 
+            placeholder="Enter your email" 
+            required 
+          />
+        </div>
+        <div class="input-group">
+          <i class="fas fa-lock"></i>
+          <input
+            type="password"
+            name="password"
+            id="password"
+            placeholder="Create a password"
+            required
+          />
+        </div>
+        <button type="submit">
+          <span><i class="fas fa-rocket"></i> Create Account</span>
+        </button>
       </form>
-      <a href="/signin" class="toggle-link">Already have an account? Sign In</a>
+      
+      <div class="divider">OR</div>
+      
+      <a href="/signin" class="toggle-link">
+        <i class="fas fa-sign-in-alt"></i> Already have an account? Sign In
+      </a>
+      
+      <a href="/" class="back-home">
+        <i class="fas fa-arrow-left"></i> Back to Home
+      </a>
     </div>
   </body>
 </html>

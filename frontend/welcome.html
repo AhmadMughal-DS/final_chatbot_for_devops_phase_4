@@ -3,132 +3,625 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DevOps Chat</title>
+    <title>DevOps AI Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        font-family: Arial, sans-serif;
-        background: #f5f5f7;
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
         display: flex;
         flex-direction: column;
         height: 100vh;
+        overflow: hidden;
       }
+
       .chat-container {
         flex: 1;
         margin: 20px auto;
-        width: 90%;
-        max-width: 800px;
-        background: #fff;
-        border-radius: 8px;
+        width: 95%;
+        max-width: 1000px;
+        background: white;
+        border-radius: 20px;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        box-shadow: 
+          0 20px 60px rgba(0, 0, 0, 0.1),
+          0 0 0 1px rgba(0, 0, 0, 0.05);
+        animation: slideUp 0.6s ease-out;
       }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
       .chat-header {
-        background: #000000;
-        padding: 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px 24px;
         color: white;
-        text-align: center;
-        font-size: 20px;
-        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
       }
-      .chat-messages {
-        flex: 1;
-        padding: 16px;
-        overflow-y: auto;
-        background: #e5ddd5;
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .bot-avatar {
+        width: 50px;
+        height: 50px;
+        background: white;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: #667eea;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .header-title {
         display: flex;
         flex-direction: column;
       }
-      .chat-input {
-        display: flex;
-        border-top: 1px solid #ccc;
-        padding: 10px;
-        background: #fff;
+
+      .header-title h1 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 4px;
       }
-      .chat-input input {
-        flex: 1;
-        padding: 12px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        font-size: 16px;
-        outline: none;
-      }
-      .chat-input button {
-        padding: 12px 20px;
-        border: none;
-        background: #007acc;
-        color: #fff;
-        cursor: pointer;
-        font-size: 16px;
-        border-radius: 5px;
-        margin-left: 10px;
-      }
-      .chat-input button:hover {
-        background: #0056b3;
-      }
-      .message-container {
+
+      .header-title .status {
+        font-size: 13px;
+        opacity: 0.9;
         display: flex;
         align-items: center;
-        margin-bottom: 12px;
+        gap: 6px;
       }
-      .message {
-        padding: 12px;
-        border-radius: 12px;
-        max-width: 65%;
-        word-wrap: break-word;
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse-dot 2s infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .header-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
         font-size: 16px;
       }
-      .user-message {
-        background: #dcf8c6;
-        align-self: flex-end;
-        text-align: right;
+
+      .header-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
       }
-      .bot-message {
-        background: #fff;
-        align-self: flex-start;
-        text-align: left;
-        border: 1px solid #ccc;
+
+      .chat-messages {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
       }
-      .user-icon,
-      .bot-icon {
+
+      .chat-messages::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .chat-messages::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      .message-container {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        animation: fadeIn 0.4s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .user-container {
+        flex-direction: row-reverse;
+        justify-content: flex-start;
+      }
+
+      .bot-container {
+        flex-direction: row;
+        justify-content: flex-start;
+      }
+
+      .message-icon {
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        margin: 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
+
       .user-icon {
-        background: url("https://cdn-icons-png.flaticon.com/512/847/847969.png")
-          no-repeat center;
-        background-size: cover;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
       }
+
       .bot-icon {
-        background: url("https://cdn-icons-png.flaticon.com/512/4712/4712037.png")
-          no-repeat center;
-        background-size: cover;
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
       }
-      .user-container {
-        justify-content: flex-end;
+
+      .message {
+        padding: 14px 18px;
+        border-radius: 16px;
+        max-width: 70%;
+        word-wrap: break-word;
+        font-size: 15px;
+        line-height: 1.5;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       }
-      .bot-container {
-        justify-content: flex-start;
+
+      .user-message {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
+
+      .bot-message {
+        background: white;
+        color: #1e293b;
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 4px;
+      }
+
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #94a3b8;
+        text-align: center;
+        padding: 40px;
+      }
+
+      .empty-state i {
+        font-size: 64px;
+        margin-bottom: 20px;
+        opacity: 0.3;
+      }
+
+      .empty-state h3 {
+        font-size: 20px;
+        margin-bottom: 10px;
+        color: #64748b;
+      }
+
+      .empty-state p {
+        font-size: 14px;
+      }
+
+      .suggested-questions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+        margin-top: 24px;
+        max-width: 800px;
+      }
+
+      .suggestion-chip {
+        background: white;
+        border: 2px solid #e2e8f0;
+        padding: 12px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .suggestion-chip:hover {
+        border-color: #667eea;
+        background: rgba(102, 126, 234, 0.05);
+        transform: translateY(-2px);
+      }
+
+      .suggestion-chip i {
+        color: #667eea;
+        font-size: 16px;
+      }
+
+      .chat-input {
+        display: flex;
+        border-top: 1px solid #e2e8f0;
+        padding: 20px 24px;
+        background: white;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .input-wrapper {
+        flex: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .chat-input input {
+        flex: 1;
+        padding: 14px 50px 14px 18px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 15px;
+        font-family: 'Inter', sans-serif;
+        outline: none;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+      }
+
+      .chat-input input:focus {
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      }
+
+      .input-icon {
+        position: absolute;
+        right: 16px;
+        color: #94a3b8;
+        font-size: 18px;
+      }
+
+      .chat-input button {
+        padding: 14px 24px;
+        border: none;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: 12px;
+        font-family: 'Inter', sans-serif;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      }
+
+      .chat-input button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+
+      .chat-input button:active {
+        transform: translateY(0);
+      }
+
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 10px 0;
+      }
+
+      .typing-dot {
+        width: 8px;
+        height: 8px;
+        background: #94a3b8;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-10px); }
+      }
+
+      @media (max-width: 768px) {
+        .chat-container {
+          margin: 10px;
+          width: calc(100% - 20px);
+          border-radius: 16px;
+        }
+
+        .message {
+          max-width: 85%;
+        }
+
+        .header-title h1 {
+          font-size: 18px;
+        }
+
+        .suggested-questions {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
     <div class="chat-container">
-      <div class="chat-header">DevOps Chatbot</div>
-      <div id="chatMessages" class="chat-messages"></div>
-      <div class="chat-input">
-        <input
-          type="text"
-          id="userInput"
-          placeholder="Type your question here..."
-        />
-        <button id="sendBtn">Send</button>
+      <div class="chat-header">
+        <div class="header-left">
+          <div class="bot-avatar">
+            <i class="fas fa-robot"></i>
+          </div>
+          <div class="header-title">
+            <h1>DevOps AI Assistant</h1>
+            <span class="status">
+              <span class="status-dot"></span>
+              Online & Ready to Help
+            </span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="header-btn" title="Clear chat" onclick="if(confirm('Clear chat history?')) location.reload();">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+          <button class="header-btn" title="Settings">
+            <i class="fas fa-cog"></i>
+          </button>
+        </div>
       </div>
-    </div>    <script>
+      
+      <div id="chatMessages" class="chat-messages">
+        <div class="empty-state" id="emptyState">
+          <i class="fas fa-comments"></i>
+          <h3>Start a conversation</h3>
+          <p>Ask me anything about DevOps, CI/CD, Docker, Kubernetes, and more!</p>
+          <div class="suggested-questions">
+            <div class="suggestion-chip" onclick="askQuestion('What is Docker?')">
+              <i class="fab fa-docker"></i>
+              <span>What is Docker?</span>
+            </div>
+            <div class="suggestion-chip" onclick="askQuestion('Explain Kubernetes')">
+              <i class="fas fa-dharmachakra"></i>
+              <span>Explain Kubernetes</span>
+            </div>
+            <div class="suggestion-chip" onclick="askQuestion('What is CI/CD?')">
+              <i class="fas fa-code-branch"></i>
+              <span>What is CI/CD?</span>
+            </div>
+            <div class="suggestion-chip" onclick="askQuestion('How does Jenkins work?')">
+              <i class="fas fa-cogs"></i>
+              <span>How does Jenkins work?</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="chat-input">
+        <div class="input-wrapper">
+          <input
+            type="text"
+            id="userInput"
+            placeholder="Type your DevOps question here..."
+          />
+          <i class="fas fa-paper-plane input-icon"></i>
+        </div>
+        <button id="sendBtn">
+          <i class="fas fa-paper-plane"></i>
+          <span>Send</span>
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const userId = "{{ user_id }}";
+      const chatMessages = document.getElementById("chatMessages");
+      const userInput = document.getElementById("userInput");
+      const sendBtn = document.getElementById("sendBtn");
+      const emptyState = document.getElementById("emptyState");
+      
+      console.log("User ID set to:", userId);
+
+      function askQuestion(question) {
+        userInput.value = question;
+        sendBtn.click();
+      }
+
+      function hideEmptyState() {
+        if (emptyState) {
+          emptyState.style.display = 'none';
+        }
+      }
+
+      function appendMessage(message, className, isUser) {
+        hideEmptyState();
+        
+        const messageContainer = document.createElement("div");
+        messageContainer.classList.add(
+          "message-container",
+          isUser ? "user-container" : "bot-container"
+        );
+
+        const icon = document.createElement("div");
+        icon.classList.add("message-icon", isUser ? "user-icon" : "bot-icon");
+        icon.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+
+        const msgDiv = document.createElement("div");
+        msgDiv.classList.add("message", className);
+        msgDiv.textContent = message;
+
+        if (isUser) {
+          messageContainer.appendChild(msgDiv);
+          messageContainer.appendChild(icon);
+        } else {
+          messageContainer.appendChild(icon);
+          messageContainer.appendChild(msgDiv);
+        }
+
+        chatMessages.appendChild(messageContainer);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+      
+      function showTypingIndicator() {
+        hideEmptyState();
+        const typingContainer = document.createElement("div");
+        typingContainer.classList.add("message-container", "bot-container");
+        typingContainer.id = "typing-indicator";
+
+        const icon = document.createElement("div");
+        icon.classList.add("message-icon", "bot-icon");
+        icon.innerHTML = '<i class="fas fa-robot"></i>';
+
+        const typingDiv = document.createElement("div");
+        typingDiv.classList.add("message", "bot-message");
+        typingDiv.innerHTML = `
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        `;
+
+        typingContainer.appendChild(icon);
+        typingContainer.appendChild(typingDiv);
+        chatMessages.appendChild(typingContainer);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      function hideTypingIndicator() {
+        const typing = document.getElementById("typing-indicator");
+        if (typing) typing.remove();
+      }
+      
+      async function loadHistory() {
+        try {
+          console.log("Loading chat history for user ID:", userId);
+          const res = await fetch(`/chat-history?user_id=${userId}`);
+          const data = await res.json();
+          console.log("Chat history response:", data);
+          if (data.history && data.history.length) {
+            hideEmptyState();
+            data.history.forEach((entry) => {
+              appendMessage(
+                entry.message,
+                entry.sender === "user" ? "user-message" : "bot-message",
+                entry.sender === "user"
+              );
+            });
+          }
+        } catch (error) {
+          console.error("Failed to load chat history", error);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", loadHistory);
+
+      sendBtn.addEventListener("click", async () => {
+        const message = userInput.value.trim();
+        if (message === "") return;
+        
+        appendMessage(message, "user-message", true);
+        userInput.value = "";
+        showTypingIndicator();
+
+        try {
+          console.log("Sending message to API with user ID:", userId);
+          const payload = { user_id: userId, message: message };
+          console.log("Request payload:", payload);
+          
+          const response = await fetch("/ask-devops-doubt", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+          console.log("API response:", data);
+          
+          hideTypingIndicator();
+          appendMessage(data.response, "bot-message", false);
+        } catch (error) {
+          hideTypingIndicator();
+          appendMessage("Sorry, I'm having trouble connecting. Please try again.", "bot-message", false);
+          console.error("Error:", error);
+        }
+      });
+
+      userInput.addEventListener("keyup", (event) => {
+        if (event.key === "Enter") {
+          sendBtn.click();
+        }
+      });
+    </script>
+  </body>
+</html>    <script>
       const userId = "{{ user_id }}";
       const chatMessages = document.getElementById("chatMessages");
       const userInput = document.getElementById("userInput");
